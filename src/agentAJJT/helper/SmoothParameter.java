@@ -9,13 +9,28 @@ public class SmoothParameter {
 
     double alpha;
     double savedValue;
+    double goal;
 
-    public SmoothParameter(double alpha) {
+    public SmoothParameter(double initialValue, double goal, double alpha) {
+        this.savedValue = initialValue;
+        this.goal = goal;
         this.alpha = alpha;
     }
 
-    public double newValue(double value) {
-        savedValue = (1 - alpha) * savedValue + alpha * value;
+    public void setValue(double value) {
+        this.savedValue = value;
+    }
+
+    public double getValue() {
+        return savedValue;
+    }
+
+    public void setGoal(double goal) {
+        this.goal = goal;
+    }
+
+    public double updateValue() {
+        savedValue = (1 - alpha) * savedValue + alpha * goal;
         return savedValue;
     }
 }

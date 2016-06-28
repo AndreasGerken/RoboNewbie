@@ -9,9 +9,7 @@ import java.util.Arrays;
 
 public class SmoothParameterArray {
 
-    private double[] alpha;
-    private double[] savedValues;
-    private double[] goals;
+    private SmoothParameter[] parameters;
 
     /**
      * Specific constructor with all details
@@ -21,9 +19,11 @@ public class SmoothParameterArray {
      * @param alpha the speed of the smoothing (1.0 is imediate 0.001 is slow)
      */
     public SmoothParameterArray(double[] initialValues, double[] goals, double[] alpha) {
-        this.savedValues = initialValues;
-        this.goals = goals;
-        this.alpha = alpha;
+        this.parameters = new SmoothParameter[initialValues.length];
+
+        for(int i=0; i<parameters.length; i++){
+            parameters[i] = new SmoothParameter(initialValues[i], goals[i], alpha[i]);
+        }
     }
 
     /**
@@ -33,14 +33,15 @@ public class SmoothParameterArray {
      * @param alpha the speed of the smoothing (1.0 is imediate 0.001 is slow)
      */
     public SmoothParameterArray(int valueCount, double alpha) {
-        this.savedValues = new double[valueCount];
-        this.goals = new double[valueCount];
-        this.alpha = new double[valueCount];
-        Arrays.fill(this.alpha, alpha);
+        this.parameters = new SmoothParameter[valueCount];
+
+        for(int i=0; i<parameters.length; i++){
+            parameters[i] = new SmoothParameter(0, 0, alpha);
+        }
     }
 
     public void setValue(int index, double value) {
-        this.savedValues[index] = value;
+        this.parameters[index].setValue(value);
     }
 
     /**
@@ -49,7 +50,9 @@ public class SmoothParameterArray {
      * @param newGoals new goal array
      */
     public void setGoals(double[] newGoals) {
-        this.goals = newGoals;
+        for(int i=0; i<parameters.length; i++){
+            this.parameters[i].setGoal(newGoals[i]);
+        }
     }
 
     /**
@@ -59,7 +62,7 @@ public class SmoothParameterArray {
      * @param goal value
      */
     public void setGoal(int index, double goal) {
-        this.goals[index] = goal;
+        this.parameters[index].setGoal(goal);
     }
 
     /**
@@ -67,12 +70,10 @@ public class SmoothParameterArray {
      *
      * @return new value array
      */
-    public double[] updateValues() {
-        for (int i = 0; i < savedValues.length; i++) {
-            savedValues[i] = (1 - alpha[i]) * savedValues[i] + alpha[i] * goals[i];
+    public void updateValues() {
+        for(int i=0; i<parameters.length; i++){
+            parameters[i].updateValue();
         }
-
-        return savedValues;
     }
 
     /**
@@ -80,7 +81,11 @@ public class SmoothParameterArray {
      *
      * @return value array
      */
-    public double[] getValues() {
-        return savedValues;
+    public double getValue(int index) {
+        return parameters[index].getValue();
+    }
+    
+    public SmoothParameter getParameter(int index){
+        return parameters[index];
     }
 }

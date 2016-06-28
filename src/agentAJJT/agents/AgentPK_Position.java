@@ -8,6 +8,7 @@
  */
 package agentAJJT.agents;
 
+import agentAJJT.helper.SmoothParameter;
 import agentAJJT.helper.SmoothParameterArray;
 import agentIO.EffectorOutput;
 import agentIO.PerceptorInput;
@@ -31,7 +32,12 @@ public class AgentPK_Position {
     private static final int CONST_ALPHA = 5;
     private static final int CONST_OFFSET = 6;
 
-    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(6, 0.1);
+    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(6, 0.05);
+    SmoothParameter shift = smoothingArray.getParameter(1);
+    SmoothParameter stepheight = smoothingArray.getParameter(2);
+    SmoothParameter steplength = smoothingArray.getParameter(3);
+    SmoothParameter step_sidewards = smoothingArray.getParameter(4);
+    SmoothParameter alpha = smoothingArray.getParameter(5);
 
     private Logger log;
     private PerceptorInput percIn;
@@ -97,6 +103,22 @@ public class AgentPK_Position {
         effOut = new EffectorOutput(sc);
         positionControl = new SimplePositionControl(percIn, effOut);
 
+        //Variables to set
+        //how much the feet are raised
+        stepheight.setGoal(10.0);
+
+        //how much the robot shifts its hips from one side to another 
+        shift.setGoal(17.0);
+
+        // y value - steplength when robot walks forward
+        steplength.setGoal(0.0);
+
+        //specifies how big the steps to the side are (x direction)
+        step_sidewards.setGoal(2.0);
+
+        //angle how much the robot turns
+        alpha.setGoal(0.0);
+
         // simulated robot hardware on the soccer field
         sc.initRobot(id, team, beamX, beamY, beamRot);
     }
@@ -108,22 +130,6 @@ public class AgentPK_Position {
      * @param timeInSec Time in seconds the agent program will run.
      */
     private void run(int timeInSec) {
-        //Variables to set
-        //how much the feet are raised
-        smoothingArray.setGoal(CONST_STEPHEIGHT, 10.0);
-
-        //how much the robot shifts its hips from one side to another 
-        smoothingArray.setGoal(CONST_SHIFT, 15.0);
-
-        // y value - steplength when robot walks forward
-        smoothingArray.setGoal(CONST_STEPLENGTH, 0.0);
-
-        //specifies how big the steps to the side are (x direction)
-        smoothingArray.setGoal(CONST_SIDEWARDS, 1.0);
-
-        //angle how much the robot turns
-        smoothingArray.setGoal(CONST_ALPHA, 0.0);
-
         //specifies how much the robot goes down at the beginning
         double offset = 25.0;
 
@@ -189,12 +195,7 @@ public class AgentPK_Position {
             // of the perceptor data. 
             sense();
 
-            double[] values = smoothingArray.updateValues();
-            double shift = values[CONST_SHIFT];
-            double stepheight = values[CONST_STEPHEIGHT];
-            double steplength = values[CONST_STEPLENGTH];
-            double step_sidewards = values[CONST_SIDEWARDS];
-            double alpha = values[CONST_ALPHA];
+            smoothingArray.updateValues();
 
             t = (percIn.getServerTime() - starttime);
 
@@ -206,15 +207,15 @@ public class AgentPK_Position {
             t = t * period_in_rad_sec;
 
             //sinus and cosinus to steer the behaviour of the legs 
-            degree_y = Math.toRadians(Math.sin(t) * shift);  //move hip left - right
-            degree_z = Math.toRadians(((1 - Math.cos(2 * t)) / 2) * stepheight); //raise feet
-            degree_x_left = Math.toRadians(((1 - Math.cos(t)) / 2) * steplength); //move left foot foward
-            degree_x_right = Math.toRadians(((1 - Math.cos(t + Math.PI)) / 2) * steplength); //move right foot forward
-            degree_turn_x = Math.toRadians(((-1 - Math.cos(t + Math.PI)) / 2) * alpha); //turn clockwise 
-            degree_turn_y = Math.toRadians(((-1 - Math.cos(t)) / 2) * Math.abs(alpha)); //turn counterclockwise
+            degree_y = Math.toRadians(Math.sin(t) * shift.getValue());  //move hip left - right
+            degree_z = Math.toRadians(((1 - Math.cos(2 * t)) / 2) * stepheight.getValue()); //raise feet
+            degree_x_left = Math.toRadians(((1 - Math.cos(t)) / 2) * steplength.getValue()); //move left foot foward
+            degree_x_right = Math.toRadians(((1 - Math.cos(t + Math.PI)) / 2) * steplength.getValue()); //move right foot forward
+            degree_turn_x = Math.toRadians(((-1 - Math.cos(t + Math.PI)) / 2) * alpha.getValue()); //turn clockwise 
+            degree_turn_y = Math.toRadians(((-1 - Math.cos(t)) / 2) * Math.abs(alpha.getValue())); //turn counterclockwise
             //steps to the left and right  
-            degree_side_right = Math.toRadians(Math.cos(t) * step_sidewards); //step right
-            degree_side_left = Math.toRadians(Math.cos(t + Math.PI) * step_sidewards); //step left
+            degree_side_right = Math.toRadians(Math.cos(t) * step_sidewards.getValue()); //step right
+            degree_side_left = Math.toRadians(Math.cos(t + Math.PI) * step_sidewards.getValue()); //step left
 
             //move hips to the left and right and lets robot make steps to the side 
             positionControl.setJointPosition(RobotConsts.RightHipRoll, degree_y + degree_side_right);
@@ -231,7 +232,7 @@ public class AgentPK_Position {
             rfp = -degree_x_right + offset_rad;
 
             //for alpha - walking in a circle 
-            if (alpha > 0) {
+            if (alpha.getValue() > 0) {
                 rhp += degree_turn_x;
             } else {
                 lhp += degree_turn_y;
@@ -257,7 +258,7 @@ public class AgentPK_Position {
             positionControl.setJointPosition(RobotConsts.LeftFootPitch, lfp);
 
             //turn robot
-            if (alpha > 0) {
+            if (alpha.getValue() > 0) {
                 positionControl.setJointPosition(RobotConsts.RightHipYawPitch, degree_turn_x);
             } else {
                 positionControl.setJointPosition(RobotConsts.LeftHipYawPitch, degree_turn_y);
