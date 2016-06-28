@@ -4,10 +4,11 @@
  *
  * @author Monika Domanska
  * @version 1.1
-******************************************************************************
+ * *****************************************************************************
  */
 package agentAJJT.agents;
 
+import agentAJJT.helper.SmoothParameterArray;
 import agentIO.EffectorOutput;
 import agentIO.PerceptorInput;
 import agentIO.ServerCommunication;
@@ -22,20 +23,35 @@ import util.RobotConsts;
  */
 public class AgentPK_Position {
 
+    // TODO: use enum!
+    private static final int CONST_STEPHEIGHT = 1;
+    private static final int CONST_SHIFT = 2;
+    private static final int CONST_STEPLENGTH = 3;
+    private static final int CONST_SIDEWARDS = 4;
+    private static final int CONST_ALPHA = 5;
+    private static final int CONST_OFFSET = 6;
+
+    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(6, 0.1);
+
+    private Logger log;
+    private PerceptorInput percIn;
+    private EffectorOutput effOut;
+    private SimplePositionControl positionControl;
+
     public static void main(String args[]) {
 
-    // Change here the class to the name of your own agent file 
+        // Change here the class to the name of your own agent file 
         // - otherwise Java will always execute the Agent_BasicStructure.
         AgentPK_Position agent = new AgentPK_Position();
 
         // Establish the connection to the server.
         agent.init();
 
-    // Run the agent program synchronized with the server cycle.
+        // Run the agent program synchronized with the server cycle.
         // Parameter: Time in seconds the agent program will run. 
         agent.run(12);
 
-    // The logged informations are printed here, when the agent is not timed 
+        // The logged informations are printed here, when the agent is not timed 
         // with the server anymore. Printing immediately when informations are 
         // gained during the server cycles could slow down the agent and impede 
         // the synchronization.
@@ -43,11 +59,6 @@ public class AgentPK_Position {
 
         System.out.println("Agent stopped.");
     }
-
-    private Logger log;
-    private PerceptorInput percIn;
-    private EffectorOutput effOut;
-    private SimplePositionControl positionControl;
 
     /**
      * A player is identified in the server by its player ID and its team name.
@@ -97,20 +108,25 @@ public class AgentPK_Position {
      * @param timeInSec Time in seconds the agent program will run.
      */
     private void run(int timeInSec) {
-     //Variables to set
+        //Variables to set
         //how much the feet are raised
-        double stepheight = 10.0;
+        smoothingArray.setGoal(CONST_STEPHEIGHT, 10.0);
+
         //how much the robot shifts its hips from one side to another 
-        double shift = 15.0;
+        smoothingArray.setGoal(CONST_SHIFT, 15.0);
+
         // y value - steplength when robot walks forward
-        double steplength = 0.0; //7.0
+        smoothingArray.setGoal(CONST_STEPLENGTH, 0.0);
+
         //specifies how big the steps to the side are (x direction)
-        double step_sidewards = 1.0;
+        smoothingArray.setGoal(CONST_SIDEWARDS, 1.0);
+
         //angle how much the robot turns
-        double alpha = 0.0;
+        smoothingArray.setGoal(CONST_ALPHA, 0.0);
+
         //specifies how much the robot goes down at the beginning
         double offset = 25.0;
-        
+
         double period_in_sec = 2.0; // 2 results in a result equal to the former factor t = t * 3
 
         //general variables 
@@ -145,7 +161,7 @@ public class AgentPK_Position {
         sense();
         // act to stay in loop sync
         act();
-        
+
         double starttime = percIn.getServerTime();
         while (percIn.getJoint(RobotConsts.RightHipPitch) < Math.toRadians(offset)) {
             sense();
@@ -172,12 +188,20 @@ public class AgentPK_Position {
             // "Hardware" access to the perceptors (simulated sensors) and processing
             // of the perceptor data. 
             sense();
+
+            double[] values = smoothingArray.updateValues();
+            double shift = values[CONST_SHIFT];
+            double stepheight = values[CONST_STEPHEIGHT];
+            double steplength = values[CONST_STEPLENGTH];
+            double step_sidewards = values[CONST_SIDEWARDS];
+            double alpha = values[CONST_ALPHA];
+
             t = (percIn.getServerTime() - starttime);
-            
+
             double period_in_rad_sec = Math.PI * 2.0 / period_in_sec;
-            double total_position = t/period_in_sec;
+            double total_position = t / period_in_sec;
             double position_in_period = total_position % period_in_sec;
-            
+
             // transform t to rad_sec timescale. t will be 2 pi after period_in_sec seconds
             t = t * period_in_rad_sec;
 
