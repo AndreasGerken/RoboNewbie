@@ -24,20 +24,12 @@ import util.RobotConsts;
  */
 public class AgentPK_Position {
 
-    // TODO: use enum!
-    private static final int CONST_STEPHEIGHT = 1;
-    private static final int CONST_SHIFT = 2;
-    private static final int CONST_STEPLENGTH = 3;
-    private static final int CONST_SIDEWARDS = 4;
-    private static final int CONST_ALPHA = 5;
-    private static final int CONST_OFFSET = 6;
-
-    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(6, 0.05);
-    SmoothParameter shift = smoothingArray.getParameter(1);
-    SmoothParameter stepheight = smoothingArray.getParameter(2);
-    SmoothParameter steplength = smoothingArray.getParameter(3);
-    SmoothParameter step_sidewards = smoothingArray.getParameter(4);
-    SmoothParameter alpha = smoothingArray.getParameter(5);
+    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(5, 0.05);
+    SmoothParameter shift = smoothingArray.getParameter(0);
+    SmoothParameter stepheight = smoothingArray.getParameter(1);
+    SmoothParameter steplength = smoothingArray.getParameter(2);
+    SmoothParameter step_sidewards = smoothingArray.getParameter(3);
+    SmoothParameter alpha = smoothingArray.getParameter(4);
 
     private Logger log;
     private PerceptorInput percIn;
