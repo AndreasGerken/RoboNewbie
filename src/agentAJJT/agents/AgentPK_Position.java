@@ -110,6 +110,8 @@ public class AgentPK_Position {
         double alpha = 0.0;
         //specifies how much the robot goes down at the beginning
         double offset = 25.0;
+        
+        double period_in_sec = 2.0; // 2 results in a result equal to the former factor t = t * 3
 
         //general variables 
         double degree_y;
@@ -167,10 +169,17 @@ public class AgentPK_Position {
         // Loop synchronized with server.
         while (true) {
 
-      // "Hardware" access to the perceptors (simulated sensors) and processing
+            // "Hardware" access to the perceptors (simulated sensors) and processing
             // of the perceptor data. 
             sense();
-            t = (percIn.getServerTime() - starttime) * 3;
+            t = (percIn.getServerTime() - starttime);
+            
+            double period_in_rad_sec = Math.PI * 2.0 / period_in_sec;
+            double total_position = t/period_in_sec;
+            double position_in_period = total_position % period_in_sec;
+            
+            // transform t to rad_sec timescale. t will be 2 pi after period_in_sec seconds
+            t = t * period_in_rad_sec;
 
             //sinus and cosinus to steer the behaviour of the legs 
             degree_y = Math.toRadians(Math.sin(t) * shift);  //move hip left - right
