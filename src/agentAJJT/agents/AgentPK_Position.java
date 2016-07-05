@@ -24,7 +24,7 @@ import util.RobotConsts;
  */
 public class AgentPK_Position {
 
-    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(0.05);
+    private final SmoothParameterArray smoothingArray = new SmoothParameterArray();
     SmoothParameter shift = smoothingArray.getNewParameter();
     SmoothParameter stepheight = smoothingArray.getNewParameter();
     SmoothParameter steplength = smoothingArray.getNewParameter();
@@ -103,6 +103,10 @@ public class AgentPK_Position {
         positionControl = new SimplePositionControl(percIn, effOut);
 
         //Variables to set
+        
+        // set alpha for all variables
+        smoothingArray.setAllAlphas(0.05);
+        
         // y direction - steplength when robot walks forward
         steplength.setGoal(-5.0);
 
