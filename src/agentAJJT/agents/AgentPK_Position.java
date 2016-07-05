@@ -24,18 +24,17 @@ import util.RobotConsts;
  */
 public class AgentPK_Position {
 
-    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(11, 0.05);
-    SmoothParameter shift = smoothingArray.getParameter(0);
-    SmoothParameter stepheight = smoothingArray.getParameter(1);
-    SmoothParameter steplength = smoothingArray.getParameter(2);
-    SmoothParameter step_sidewards = smoothingArray.getParameter(3);
-    SmoothParameter alpha = smoothingArray.getParameter(4);
-    SmoothParameter offset_rad = smoothingArray.getParameter(5);
-    SmoothParameter shoulder_pitch = smoothingArray.getParameter(6);
-    SmoothParameter shoulder_yaw = smoothingArray.getParameter(7);
-    SmoothParameter bal_x = smoothingArray.getParameter(8);
-    SmoothParameter bal_y = smoothingArray.getParameter(9);
-    SmoothParameter bal_smooth = smoothingArray.getParameter(10);
+    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(0.05);
+    SmoothParameter shift = smoothingArray.getNewParameter();
+    SmoothParameter stepheight = smoothingArray.getNewParameter();
+    SmoothParameter steplength = smoothingArray.getNewParameter();
+    SmoothParameter step_sidewards = smoothingArray.getNewParameter();
+    SmoothParameter alpha = smoothingArray.getNewParameter();
+    SmoothParameter offset_rad = smoothingArray.getNewParameter();
+    SmoothParameter shoulder_pitch = smoothingArray.getNewParameter();
+    SmoothParameter shoulder_yaw = smoothingArray.getNewParameter();
+    SmoothParameter bal_x = smoothingArray.getNewParameter();
+    SmoothParameter bal_y = smoothingArray.getNewParameter();
 
     private Logger log;
     private PerceptorInput percIn;
@@ -104,36 +103,33 @@ public class AgentPK_Position {
         positionControl = new SimplePositionControl(percIn, effOut);
 
         //Variables to set
-        //how much the feet are raised
+        // y direction - steplength when robot walks forward
+        steplength.setGoal(-5.0);
+
+        // x direction - specifies how big the steps to the side are
+        step_sidewards.setGoal(0.0);
+
+        // angular direction - angular velocity goal to turn the robot
+        alpha.setGoal(10.0);
+
+        // how much the feet are raised
         stepheight.setGoal(10.0);
 
-        //how much the robot shifts its hips from one side to another 
+        // how much the robot shifts its hips from one side to another 
         shift.setGoal(17.0);
-
-        // y value - steplength when robot walks forward
-        steplength.setGoal(0.0);
-
-        //specifies how big the steps to the side are (x direction)
-        step_sidewards.setGoal(2.0);
-
-        //angle how much the robot turns
-        alpha.setGoal(0.0);
 
         // move hip downwards
         offset_rad.setGoal(Math.toRadians(25.0));
-        
+
         // Arms for stabilization
         shoulder_pitch.setGoal(Math.toRadians(-90));
         shoulder_yaw.setGoal(Math.toRadians(30));
-        
+
         // Smoothing for stabilization
         // Goal will be set in loop
-        bal_x.setAlpha(0.7);
-        bal_y.setAlpha(0.7);
-        
-        // Smoothing parameter
-        bal_smooth.setGoal(0.015);
-        
+        bal_x.setAlpha(0.01);
+        bal_y.setAlpha(0.01);
+
         // simulated robot hardware on the soccer field
         sc.initRobot(id, team, beamX, beamY, beamRot);
     }
@@ -169,11 +165,11 @@ public class AgentPK_Position {
         double t;
         double rhp;
         double lhp;
-        double rkp = 0.0;
-        double lkp = 0.0;
+        double rkp;
+        double lkp;
         double lfp;
         double rfp;
-        
+
         //get servcer time to start with - this hels robot not to fall over 
         sense();
         // act to stay in loop sync
@@ -197,16 +193,16 @@ public class AgentPK_Position {
 
             // transform t to rad_sec timescale. t will be 2 pi after period_in_sec seconds
             t = t * period_in_rad_sec;
-            
+
             // Get the vector for balancing, with smoothing            
-            bal_x.setGoal((1-bal_smooth.getValue()) * bal_x.getValue() + bal_smooth.getValue()*orientation.getOrientation(0.5).getX());
-            bal_y.setGoal((1-bal_smooth.getValue()) * bal_y.getValue() + bal_smooth.getValue()*orientation.getOrientation(0.5).getY());
-            
+            bal_x.setGoal(orientation.getOrientation(0.5).getX());
+            bal_y.setGoal(orientation.getOrientation(0.5).getY());
+
             // Balance with arms
             positionControl.setJointPosition(RobotConsts.LeftShoulderPitch, shoulder_pitch.getValue() + bal_x.getValue());
             positionControl.setJointPosition(RobotConsts.RightShoulderPitch, shoulder_pitch.getValue() + bal_x.getValue());
             positionControl.setJointPosition(RobotConsts.LeftShoulderYaw, shoulder_yaw.getValue() + bal_y.getValue());
-            positionControl.setJointPosition(RobotConsts.RightShoulderYaw, -shoulder_yaw.getValue() + bal_y.getValue());                        
+            positionControl.setJointPosition(RobotConsts.RightShoulderYaw, -shoulder_yaw.getValue() + bal_y.getValue());
 
             //sinus and cosinus to steer the behaviour of the legs 
             degree_y = Math.toRadians(Math.sin(t) * shift.getValue());  //move hip left - right
