@@ -1,4 +1,4 @@
-package examples;
+package agentAJJT.agents;
 
 import agentIO.EffectorOutput;
 import agentIO.PerceptorInput;

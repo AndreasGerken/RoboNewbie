@@ -33,6 +33,7 @@ public class AgentPK_Position {
 
     private Logger log;
     private PerceptorInput percIn;
+    private OrientationPerceptor orientation;
     private EffectorOutput effOut;
     private SimplePositionControl positionControl;
 
@@ -92,6 +93,7 @@ public class AgentPK_Position {
         // internal agent classes
         log = new Logger();
         percIn = new PerceptorInput(sc);
+        orientation = new OrientationPerceptor(percIn);
         effOut = new EffectorOutput(sc);
         positionControl = new SimplePositionControl(percIn, effOut);
 
@@ -155,6 +157,16 @@ public class AgentPK_Position {
         // GO DOWN TO START POS     
         double offset_degree = 0.0;
         double offset_rad = Math.toRadians(offset);
+        
+        // Arms
+        final double shoulder_pitch = Math.toRadians(-90);
+        final double shoulder_yaw = Math.toRadians(30);
+        
+        // Balancing variables
+        final double bal_smooth = 0.015;
+        double bal_x = 0;
+        double bal_y = 0;
+        
         //get servcer time to start with - this hels robot not to fall over 
         sense();
         // act to stay in loop sync
@@ -172,7 +184,13 @@ public class AgentPK_Position {
             positionControl.setJointPosition(RobotConsts.LeftKneePitch, -2 * offset_degree);
             positionControl.setJointPosition(RobotConsts.RightFootPitch, offset_degree);
             positionControl.setJointPosition(RobotConsts.LeftFootPitch, offset_degree);
-
+	    
+            // Bring arms down in start position            
+            positionControl.setJointPosition(RobotConsts.LeftShoulderPitch, shoulder_pitch);
+            positionControl.setJointPosition(RobotConsts.RightShoulderPitch, shoulder_pitch);
+            positionControl.setJointPosition(RobotConsts.LeftShoulderYaw, shoulder_yaw);
+            positionControl.setJointPosition(RobotConsts.RightShoulderYaw, -shoulder_yaw);
+            
             positionControl.update();
             act();
         }
@@ -197,6 +215,16 @@ public class AgentPK_Position {
 
             // transform t to rad_sec timescale. t will be 2 pi after period_in_sec seconds
             t = t * period_in_rad_sec;
+            
+            // Get the vector for balancing, with smoothing            
+            bal_x = (1-bal_smooth)*bal_x + bal_smooth*orientation.getOrientation(0.5).getX();
+            bal_y = (1-bal_smooth)*bal_y + bal_smooth*orientation.getOrientation(0.5).getY();
+            
+            // Balance with arms
+            positionControl.setJointPosition(RobotConsts.LeftShoulderPitch, shoulder_pitch + bal_x);
+            positionControl.setJointPosition(RobotConsts.RightShoulderPitch, shoulder_pitch + bal_x);
+            positionControl.setJointPosition(RobotConsts.LeftShoulderYaw, shoulder_yaw + bal_y);
+            positionControl.setJointPosition(RobotConsts.RightShoulderYaw, -shoulder_yaw + bal_y);                        
 
             //sinus and cosinus to steer the behaviour of the legs 
             degree_y = Math.toRadians(Math.sin(t) * shift.getValue());  //move hip left - right

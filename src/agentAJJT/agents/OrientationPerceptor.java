@@ -1,4 +1,4 @@
-package examples;
+package agentAJJT.agents;
 
 import org.apache.commons.math3.geometry.euclidean.threed.Vector3D;
 import agentIO.PerceptorInput;
