@@ -24,7 +24,7 @@ import util.RobotConsts;
  */
 public class AgentPK_Position {
 
-    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(10, 0.05);
+    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(11, 0.05);
     SmoothParameter shift = smoothingArray.getParameter(0);
     SmoothParameter stepheight = smoothingArray.getParameter(1);
     SmoothParameter steplength = smoothingArray.getParameter(2);
@@ -35,6 +35,7 @@ public class AgentPK_Position {
     SmoothParameter shoulder_yaw = smoothingArray.getParameter(7);
     SmoothParameter bal_x = smoothingArray.getParameter(8);
     SmoothParameter bal_y = smoothingArray.getParameter(9);
+    SmoothParameter bal_smooth = smoothingArray.getParameter(10);
 
     private Logger log;
     private PerceptorInput percIn;
@@ -130,6 +131,9 @@ public class AgentPK_Position {
         bal_x.setAlpha(0.7);
         bal_y.setAlpha(0.7);
         
+        // Smoothing parameter
+        bal_smooth.setGoal(0.015);
+        
         // simulated robot hardware on the soccer field
         sc.initRobot(id, team, beamX, beamY, beamRot);
     }
@@ -170,9 +174,6 @@ public class AgentPK_Position {
         double lfp;
         double rfp;
         
-        // Balancing variables
-        final double bal_smooth = 0.015;
-        
         //get servcer time to start with - this hels robot not to fall over 
         sense();
         // act to stay in loop sync
@@ -198,8 +199,8 @@ public class AgentPK_Position {
             t = t * period_in_rad_sec;
             
             // Get the vector for balancing, with smoothing            
-            bal_x.setGoal((1-bal_smooth) * bal_x.getValue() + bal_smooth*orientation.getOrientation(0.5).getX());
-            bal_y.setGoal((1-bal_smooth) * bal_y.getValue() + bal_smooth*orientation.getOrientation(0.5).getY());
+            bal_x.setGoal((1-bal_smooth.getValue()) * bal_x.getValue() + bal_smooth.getValue()*orientation.getOrientation(0.5).getX());
+            bal_y.setGoal((1-bal_smooth.getValue()) * bal_y.getValue() + bal_smooth.getValue()*orientation.getOrientation(0.5).getY());
             
             // Balance with arms
             positionControl.setJointPosition(RobotConsts.LeftShoulderPitch, shoulder_pitch.getValue() + bal_x.getValue());
