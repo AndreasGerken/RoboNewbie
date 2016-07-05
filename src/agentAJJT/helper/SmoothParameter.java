@@ -33,4 +33,8 @@ public class SmoothParameter {
         savedValue = (1 - alpha) * savedValue + alpha * goal;
         return savedValue;
     }
+
+    public void setAlpha(double alpha) {
+        this.alpha = alpha;
+    }
 }

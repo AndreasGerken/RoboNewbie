@@ -24,12 +24,17 @@ import util.RobotConsts;
  */
 public class AgentPK_Position {
 
-    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(5, 0.05);
+    private final SmoothParameterArray smoothingArray = new SmoothParameterArray(10, 0.05);
     SmoothParameter shift = smoothingArray.getParameter(0);
     SmoothParameter stepheight = smoothingArray.getParameter(1);
     SmoothParameter steplength = smoothingArray.getParameter(2);
     SmoothParameter step_sidewards = smoothingArray.getParameter(3);
     SmoothParameter alpha = smoothingArray.getParameter(4);
+    SmoothParameter offset_rad = smoothingArray.getParameter(5);
+    SmoothParameter shoulder_pitch = smoothingArray.getParameter(6);
+    SmoothParameter shoulder_yaw = smoothingArray.getParameter(7);
+    SmoothParameter bal_x = smoothingArray.getParameter(8);
+    SmoothParameter bal_y = smoothingArray.getParameter(9);
 
     private Logger log;
     private PerceptorInput percIn;
@@ -113,6 +118,18 @@ public class AgentPK_Position {
         //angle how much the robot turns
         alpha.setGoal(0.0);
 
+        // move hip downwards
+        offset_rad.setGoal(Math.toRadians(25.0));
+        
+        // Arms for stabilization
+        shoulder_pitch.setGoal(Math.toRadians(-90));
+        shoulder_yaw.setGoal(Math.toRadians(30));
+        
+        // Smoothing for stabilization
+        // Goal will be set in loop
+        bal_x.setAlpha(0.7);
+        bal_y.setAlpha(0.7);
+        
         // simulated robot hardware on the soccer field
         sc.initRobot(id, team, beamX, beamY, beamRot);
     }
@@ -125,7 +142,6 @@ public class AgentPK_Position {
      */
     private void run(int timeInSec) {
         //specifies how much the robot goes down at the beginning
-        double offset = 25.0;
 
         double period_in_sec = 2.0; // 2 results in a result equal to the former factor t = t * 3
 
@@ -153,19 +169,9 @@ public class AgentPK_Position {
         double lkp = 0.0;
         double lfp;
         double rfp;
-
-        // GO DOWN TO START POS     
-        double offset_degree = 0.0;
-        double offset_rad = Math.toRadians(offset);
-        
-        // Arms
-        final double shoulder_pitch = Math.toRadians(-90);
-        final double shoulder_yaw = Math.toRadians(30);
         
         // Balancing variables
         final double bal_smooth = 0.015;
-        double bal_x = 0;
-        double bal_y = 0;
         
         //get servcer time to start with - this hels robot not to fall over 
         sense();
@@ -173,31 +179,6 @@ public class AgentPK_Position {
         act();
 
         double starttime = percIn.getServerTime();
-        while (percIn.getJoint(RobotConsts.RightHipPitch) < Math.toRadians(offset)) {
-            sense();
-            t = percIn.getServerTime() - starttime;
-            offset_degree = Math.toRadians(((1 - Math.cos(2 * t)) / 2) * offset);
-
-            positionControl.setJointPosition(RobotConsts.RightHipPitch, offset_degree);
-            positionControl.setJointPosition(RobotConsts.LeftHipPitch, offset_degree);
-            positionControl.setJointPosition(RobotConsts.RightKneePitch, -2 * offset_degree);
-            positionControl.setJointPosition(RobotConsts.LeftKneePitch, -2 * offset_degree);
-            positionControl.setJointPosition(RobotConsts.RightFootPitch, offset_degree);
-            positionControl.setJointPosition(RobotConsts.LeftFootPitch, offset_degree);
-	    
-            // Bring arms down in start position            
-            positionControl.setJointPosition(RobotConsts.LeftShoulderPitch, shoulder_pitch);
-            positionControl.setJointPosition(RobotConsts.RightShoulderPitch, shoulder_pitch);
-            positionControl.setJointPosition(RobotConsts.LeftShoulderYaw, shoulder_yaw);
-            positionControl.setJointPosition(RobotConsts.RightShoulderYaw, -shoulder_yaw);
-            
-            positionControl.update();
-            act();
-        }
-
-        sense();
-        act();
-        starttime = percIn.getServerTime();
         // Loop synchronized with server.
         while (true) {
 
@@ -217,14 +198,14 @@ public class AgentPK_Position {
             t = t * period_in_rad_sec;
             
             // Get the vector for balancing, with smoothing            
-            bal_x = (1-bal_smooth)*bal_x + bal_smooth*orientation.getOrientation(0.5).getX();
-            bal_y = (1-bal_smooth)*bal_y + bal_smooth*orientation.getOrientation(0.5).getY();
+            bal_x.setGoal((1-bal_smooth) * bal_x.getValue() + bal_smooth*orientation.getOrientation(0.5).getX());
+            bal_y.setGoal((1-bal_smooth) * bal_y.getValue() + bal_smooth*orientation.getOrientation(0.5).getY());
             
             // Balance with arms
-            positionControl.setJointPosition(RobotConsts.LeftShoulderPitch, shoulder_pitch + bal_x);
-            positionControl.setJointPosition(RobotConsts.RightShoulderPitch, shoulder_pitch + bal_x);
-            positionControl.setJointPosition(RobotConsts.LeftShoulderYaw, shoulder_yaw + bal_y);
-            positionControl.setJointPosition(RobotConsts.RightShoulderYaw, -shoulder_yaw + bal_y);                        
+            positionControl.setJointPosition(RobotConsts.LeftShoulderPitch, shoulder_pitch.getValue() + bal_x.getValue());
+            positionControl.setJointPosition(RobotConsts.RightShoulderPitch, shoulder_pitch.getValue() + bal_x.getValue());
+            positionControl.setJointPosition(RobotConsts.LeftShoulderYaw, shoulder_yaw.getValue() + bal_y.getValue());
+            positionControl.setJointPosition(RobotConsts.RightShoulderYaw, -shoulder_yaw.getValue() + bal_y.getValue());                        
 
             //sinus and cosinus to steer the behaviour of the legs 
             degree_y = Math.toRadians(Math.sin(t) * shift.getValue());  //move hip left - right
@@ -244,12 +225,12 @@ public class AgentPK_Position {
             positionControl.setJointPosition(RobotConsts.LeftFootRoll, -degree_y - degree_side_left);
 
             //angles needed in every cycle added up 
-            rhp = degree_x_right + offset_rad;
-            lhp = degree_x_left + offset_rad;
-            rkp = - 2 * offset_rad;
-            lkp = - 2 * offset_rad;
-            lfp = -degree_x_left + offset_rad;
-            rfp = -degree_x_right + offset_rad;
+            rhp = degree_x_right + offset_rad.getValue();
+            lhp = degree_x_left + offset_rad.getValue();
+            rkp = - 2 * offset_rad.getValue();
+            lkp = - 2 * offset_rad.getValue();
+            lfp = -degree_x_left + offset_rad.getValue();
+            rfp = -degree_x_right + offset_rad.getValue();
 
             //for alpha - walking in a circle 
             if (alpha.getValue() > 0) {
