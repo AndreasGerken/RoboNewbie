@@ -108,10 +108,10 @@ public class AgentPK_Position {
         smoothingArray.setAllAlphas(0.05);
         
         // y direction - steplength when robot walks forward
-        steplength.setGoal(-5.0);
+        steplength.setGoal(-15.0);
 
         // x direction - specifies how big the steps to the side are
-        step_sidewards.setGoal(0.0);
+        step_sidewards.setGoal(5.0);
 
         // angular direction - angular velocity goal to turn the robot
         alpha.setGoal(10.0);
